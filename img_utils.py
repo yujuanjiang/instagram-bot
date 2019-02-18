@@ -33,7 +33,7 @@ def process_image(image):
     if probability(50):
         image = ImageOps.equalize(image)
     if probability(50):
-        blur_radius = random.randrange(0, 10)
+        blur_radius = random.randrange(0, 3)
         image = image.filter(ImageFilter.GaussianBlur(blur_radius))
 
     return image

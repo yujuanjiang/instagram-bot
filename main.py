@@ -1,42 +1,44 @@
-from InstagramAPI import InstagramAPI as api
 import config
 import img_utils
-import os
+from api_utils import *
+import os, platform
 
 
-def delete_all_in_feed(api_session):
-    print("Removing all posts in feed...")
-    for post in api_session.getTotalSelfUserFeed():
-        post_id = post['id']
-        print("Removing post with id: {}".format(post_id))
-        api_session.deleteMedia(post_id)
+def get_temp_img_path():
+    temp_image_path = os.path.dirname(os.path.realpath(__file__))
+    if "windows" in platform.platform().lower():
+        temp_image_path += '\\'
+    else:
+        temp_image_path += '/'
+    temp_image_path += 'processed_image.jpg'
+    return temp_image_path
 
-login_attempts = 0
-login_status = False
-temp_image_path = "temp.jpg"
-session = api(config.login, config.password)
-print("Connecting to Instagram API...")
 
-while login_status is False and login_attempts < config.MAX_LOGIN_ATTEMPTS:
-    print("Login attempt #{}".format(login_attempts))
-    login_status = session.login()
-    login_attempts += 1
+temp_img_path = get_temp_img_path()
+api = InstagramApiFacade(config.login, config.password)
 
-if login_status is True:
-    try:
-        base_image = img_utils.Image.open(config.image_path)
-        print("Image loaded. Processing...")
-        processed_image = img_utils.process_image(base_image)
-        print("Saving temporary file {}".format(temp_image_path))
-        processed_image.save(temp_image_path)
-        print("Attempting to upload photo with caption: \"{}\"".format(config.caption))
-        if session.uploadPhoto(temp_image_path, caption=config.caption) is False:
-            print("Upload successful!")
-        print("Removing temporary file {}".format(temp_image_path))
-        os.remove(temp_image_path)
-    except FileNotFoundError:
-        print("File not found")
-    except Exception:
-        print("Unexpected error")
-else:
-    print("Failed to connect to Instagram API")
+try:
+    print("Opening and processing image: {}".format(config.image_path))
+    processed_image = img_utils.process_image_from_file(config.image_path)
+    print("Saving processed image to temporary file: {}".format(temp_img_path))
+    processed_image.save(temp_img_path)
+    print("Logging in...")
+    api.login_with_retries()
+    api.upload_photo(temp_img_path, config.caption)
+    print("Removing temporary file: {}".format(temp_img_path))
+    os.remove(temp_img_path)
+except TooManyLoginAttemptsError:
+    print("Operation failed, too many login attempts. ")
+except NotLoggedInError:
+    print("API session inactive, can't upload image.")
+except FileExistsError as err:
+    print("File already exists: {}".format(err.filename))
+except FileNotFoundError as err:
+    print("Couldn't find file: {}".format(err.filename))
+except IOError as err:
+    print("Couldn't find file: {}".format(err.filename))
+except:
+    print("Unknown error")
+finally:
+    api.logout()
+

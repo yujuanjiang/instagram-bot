@@ -41,4 +41,3 @@ except:
     print("Unknown error")
 finally:
     api.logout()
-

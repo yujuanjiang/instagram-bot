@@ -1,6 +1,5 @@
 from InstagramAPI import InstagramAPI
 from _collections_abc import Iterable
-from config import MAX_LOGIN_ATTEMPTS
 import time
 
 
@@ -57,7 +56,7 @@ class InstagramApiFacade:
     def upload_photo(self, file_path, caption):
         if self.is_logged_in():
             print("Uploading {} with caption \"{}\"".format(file_path, caption))
-            # self.api_session.uploadPhoto(file_path, caption)
+            self.api_session.uploadPhoto(file_path, caption)
         else:
             raise NotLoggedInError
 
